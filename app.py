@@ -1,7 +1,6 @@
 from datetime import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-옵พอร์ต (ถ้าใช้ st.cache_data)
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -23,7 +22,6 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1vgrTK7RhodK4KiBU63j2IJAfi-F
 
 @st.cache_resource
 def init_connection():
-  # รองรับการดึงค่าจาก Streamlit Secrets
   scope = [
       "https://spreadsheets.google.com/feeds",
       "https://www.googleapis.com/auth/drive",
@@ -32,7 +30,6 @@ def init_connection():
     creds_dict = dict(st.secrets["gcp_service_account"])
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
   else:
-    # สำหรับการทดสอบ Local (ถ้ามีไฟล์ service_account.json)
     creds = ServiceAccountCredentials.from_json_keyfile_name(
         "service_account.json", scope
     )
@@ -137,7 +134,11 @@ with col1:
   st.metric(
       label="Checklist เฉลี่ย",
       value=f"{avg_checklist:.2f}%",
-      delta=f"{avg_checklist - df['Chicklist'].astype(float).mean():.2f}% จากภาพรวม",
+      delta=(
+          f"{avg_checklist - df['Chicklist'].astype(float).mean():.2f}%"
+          if not df.empty
+          else "0%"
+      ),
   )
 
 with col2:
@@ -186,7 +187,6 @@ tab1, tab2, tab3 = st.tabs(
 with tab1:
   st.subheader("แนวโน้มคะแนนเฉลี่ยรายเดือน")
   if not filtered_df.empty and "เดือน" in filtered_df.columns:
-    # จัดกลุ่มตามเดือนและคำนวณค่าเฉลี่ย
     trend_df = (
         filtered_df.groupby("เดือน")[numeric_cols].mean().reset_index()
     )
@@ -211,7 +211,6 @@ with tab2:
     branch_df = (
         filtered_df.groupby("สาขา")[numeric_cols].mean().reset_index()
     )
-    # ทำให้อยู่ในรูป Long format เพื่อทำ Bar chart แบบจัดกลุ่ม
     branch_melted = branch_df.melt(
         id_vars="สาขา", value_vars=numeric_cols, var_name="KPI", value_name="Score"
     )
@@ -299,6 +298,6 @@ with st.expander("➕ เพิ่มข้อมูล KPI ใหม่ลง�
         st.success(
             "✅ บันทึกข้อมูลสำเร็จ! รีเฟรชหน้าจอหรือรอสักครู่เพื่อดูข้อมูลใหม่"
         )
-        st.cache_data.clear()  # ล้าง Cache เพื่อดึงข้อมูลใหม่ล่าสุด
+        st.cache_data.clear()
       except Exception as e:
         st.error(f"เกิดข้อผิดพลาดในการบันทึกข้อมูล: {e}")
